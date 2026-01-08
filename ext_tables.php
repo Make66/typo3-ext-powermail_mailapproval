@@ -1,4 +1,7 @@
 <?php
+
+use Taketool\PowermailMailapproval\Controller\ApprovalController;
+
 defined('TYPO3') or die();
 
 // Add TCA field
@@ -23,4 +26,22 @@ $tempColumns = [
     'approved',
     '',
     'after:uid'
+);
+
+// Module System > Backend Users
+\TYPO3\CMS\Extbase\Utility\ExtensionUtility::registerModule(
+    'PowermailMailapproval',
+    'web',
+    'approval',
+    'after:powermail:',
+    [
+        ApprovalController::class => 'list, show, approve, reject'
+    ],
+    [
+        'access' => 'user,group',
+        'iconIdentifier' => 'powermail_mailapproval-module',
+        'labels' => 'LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang_mod.xlf',
+        //'navigationComponentId' => '',
+        //'inheritNavigationComponentFromMainModule' => false,
+    ]
 );

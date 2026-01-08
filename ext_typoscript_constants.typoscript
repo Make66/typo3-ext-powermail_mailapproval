@@ -1,0 +1,2 @@
+# Auto-loaded TypoScript constants
+#@import 'EXT:powermail_mailapproval/Configuration/TypoScript/constants.typoscript'

@@ -4,158 +4,412 @@ declare(strict_types=1);
 namespace Taketool\PowermailMailapproval\Controller;
 
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
-use TYPO3\CMS\Backend\Template\ModuleTemplate;
 use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
 use TYPO3\CMS\Core\Database\ConnectionPool;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Messaging\FlashMessage;
-use TYPO3\CMS\Core\Messaging\FlashMessageService;
-use TYPO3\CMS\Core\Type\ContextualFeedbackSeverity;
-use TYPO3\CMS\Fluid\View\StandaloneView;
+use TYPO3\CMS\Core\Pagination\SimplePagination;
+use TYPO3\CMS\Core\Pagination\ArrayPaginator;
+use TYPO3\CMS\Core\Site\SiteFinder;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Extbase\Mvc\Controller\ActionController;
 
-class ApprovalController
+/**
+ * ApprovalController
+ *
+ * Extbase-based backend module controller for approving powermail submissions
+ * With pagination support and action buttons in show view
+ */
+class ApprovalController extends ActionController
 {
     protected ModuleTemplateFactory $moduleTemplateFactory;
+    protected SiteFinder $siteFinder;
+    protected int $storagePid = 0;
+    protected int $currentPageId = 0;
+    protected int $itemsPerPage = 20;
 
-    public function __construct(ModuleTemplateFactory $moduleTemplateFactory)
-    {
+    /**
+     * Constructor-based dependency injection
+     *
+     * @param ModuleTemplateFactory $moduleTemplateFactory
+     * @param SiteFinder $siteFinder
+     */
+    public function __construct(
+        ModuleTemplateFactory $moduleTemplateFactory,
+        SiteFinder $siteFinder
+    ) {
         $this->moduleTemplateFactory = $moduleTemplateFactory;
+        $this->siteFinder = $siteFinder;
     }
 
-    public function handleRequest(ServerRequestInterface $request): ResponseInterface
+    /**
+     * Initialize action - set view configuration and read storage PID from site config
+     */
+    protected function initializeAction(): void
     {
-        $action = $request->getQueryParams()['action'] ?? 'list';
+        parent::initializeAction();
 
-        switch ($action) {
-            case 'approve':
-                return $this->approveAction($request);
-            case 'reject':
-                return $this->rejectAction($request);
-            default:
-                return $this->listAction($request);
+        // Set template paths
+        if ($this->view !== null) {
+            $this->view->setTemplateRootPaths([
+                10 => GeneralUtility::getFileAbsFileName('EXT:powermail_mailapproval/Resources/Private/Templates/')
+            ]);
+            $this->view->setPartialRootPaths([
+                10 => GeneralUtility::getFileAbsFileName('EXT:powermail_mailapproval/Resources/Private/Partials/')
+            ]);
+            $this->view->setLayoutRootPaths([
+                10 => GeneralUtility::getFileAbsFileName('EXT:powermail_mailapproval/Resources/Private/Layouts/')
+            ]);
         }
+
+        // Get current page ID from request
+        $this->currentPageId = $this->getCurrentPageId();
+
+        // Get storage PID from site configuration
+        $this->storagePid = $this->getStoragePidFromSiteConfig($this->currentPageId);
+
+        // Get items per page from settings (default: 20)
+        $this->itemsPerPage = $this->getItemsPerPage();
     }
 
-    protected function listAction(ServerRequestInterface $request): ResponseInterface
+    /**
+     * Get current page ID from request
+     *
+     * @return int
+     */
+    protected function getCurrentPageId(): int
     {
-        $moduleTemplate = $this->moduleTemplateFactory->create($request);
+        $pageId = (int)($this->request->getQueryParams()['id'] ?? 0);
+        if ($pageId > 0) {
+            return $pageId;
+        }
+
+        $pageId = (int)($this->request->getParsedBody()['id'] ?? 0);
+        if ($pageId > 0) {
+            return $pageId;
+        }
+
+        if (isset($GLOBALS['BE_USER'])) {
+            $pageId = (int)($GLOBALS['BE_USER']->getModuleData('web_PowermailMailapprovalApproval/lastPageId') ?? 0);
+        }
+
+        return $pageId;
+    }
+
+    /**
+     * Get storage PID from site configuration
+     *
+     * @param int $pageId Current page ID to determine the site
+     * @return int Storage PID (0 = show all entries)
+     */
+    protected function getStoragePidFromSiteConfig(int $pageId): int
+    {
+        try {
+            if ($pageId > 0) {
+                $site = $this->siteFinder->getSiteByPageId($pageId);
+            } else {
+                $sites = $this->siteFinder->getAllSites();
+                if (empty($sites)) {
+                    return 0;
+                }
+                $site = reset($sites);
+            }
+
+            $configuration = $site->getConfiguration();
+
+            if (isset($configuration['settings']['powermailMailapproval']['storagePid'])) {
+                return (int)$configuration['settings']['powermailMailapproval']['storagePid'];
+            }
+
+            if (isset($configuration['powermailMailapproval']['storagePid'])) {
+                return (int)$configuration['powermailMailapproval']['storagePid'];
+            }
+
+        } catch (\Exception $e) {
+            return 0;
+        }
+
+        return 0;
+    }
+
+    /**
+     * Get items per page from site configuration
+     *
+     * @return int
+     */
+    protected function getItemsPerPage(): int
+    {
+        try {
+            if ($this->currentPageId > 0) {
+                $site = $this->siteFinder->getSiteByPageId($this->currentPageId);
+                $configuration = $site->getConfiguration();
+
+                if (isset($configuration['settings']['powermailMailapproval']['itemsPerPage'])) {
+                    return (int)$configuration['settings']['powermailMailapproval']['itemsPerPage'];
+                }
+            }
+        } catch (\Exception $e) {
+            // Fallback to default
+        }
+
+        return 20; // Default
+    }
+
+    /**
+     * List action - shows all unapproved mail entries sorted by crdate DESC with pagination
+     *
+     * @param int $currentPage Current page number for pagination
+     * @return ResponseInterface
+     */
+    public function listAction(int $currentPage = 1): ResponseInterface
+    {
+        $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
         $moduleTemplate->setTitle('Powermail Approval');
 
         // Get unapproved mails sorted by crdate DESC
         $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
             ->getQueryBuilderForTable('tx_powermail_domain_model_mail');
 
-        $mails = $queryBuilder
+        $queryBuilder
             ->select('*')
             ->from('tx_powermail_domain_model_mail')
             ->where(
                 $queryBuilder->expr()->eq('approved', $queryBuilder->createNamedParameter(0, \PDO::PARAM_INT)),
                 $queryBuilder->expr()->eq('deleted', $queryBuilder->createNamedParameter(0, \PDO::PARAM_INT))
             )
-            ->orderBy('crdate', 'DESC')
+            ->orderBy('crdate', 'DESC');
+
+        // Filter by storagePid if configured
+        if ($this->storagePid > 0) {
+            $queryBuilder->andWhere(
+                $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($this->storagePid, \PDO::PARAM_INT))
+            );
+        }
+
+        $allMails = $queryBuilder
             ->executeQuery()
             ->fetchAllAssociative();
 
-        // Get form titles and answers for each mail
-        foreach ($mails as &$mail) {
-            $formQueryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
-                ->getQueryBuilderForTable('tx_powermail_domain_model_form');
-
-            $form = $formQueryBuilder
-                ->select('title')
-                ->from('tx_powermail_domain_model_form')
-                ->where(
-                    $formQueryBuilder->expr()->eq('uid', $formQueryBuilder->createNamedParameter($mail['form'], \PDO::PARAM_INT))
-                )
-                ->executeQuery()
-                ->fetchAssociative();
-
-            $mail['form_title'] = $form['title'] ?? 'Unknown Form';
-
-            // Get answers
-            $answerQueryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
-                ->getQueryBuilderForTable('tx_powermail_domain_model_answer');
-
-            $answers = $answerQueryBuilder
-                ->select('a.value', 'a.field', 'f.title as field_title')
-                ->from('tx_powermail_domain_model_answer', 'a')
-                ->leftJoin('a', 'tx_powermail_domain_model_field', 'f', 'a.field = f.uid')
-                ->where(
-                    $answerQueryBuilder->expr()->eq('a.mail', $answerQueryBuilder->createNamedParameter($mail['uid'], \PDO::PARAM_INT))
-                )
-                ->executeQuery()
-                ->fetchAllAssociative();
-
-            $mail['answers'] = $answers;
+        // Enrich mails with form titles
+        foreach ($allMails as &$mail) {
+            $mail['form_title'] = $this->getFormTitle((int)$mail['form']);
         }
 
-        $view = GeneralUtility::makeInstance(StandaloneView::class);
-        $view->setTemplatePathAndFilename(
-            GeneralUtility::getFileAbsFileName('EXT:powermail_mailapproval/Resources/Private/Templates/Approval/List.html')
-        );
-        $view->assign('mails', $mails);
+        // Create pagination
+        $paginator = new ArrayPaginator($allMails, $currentPage, $this->itemsPerPage);
+        $pagination = new SimplePagination($paginator);
 
-        $moduleTemplate->setContent($view->render());
-        return $moduleTemplate->renderResponse();
+        $this->view->assign('mails', $paginator->getPaginatedItems());
+        $this->view->assign('paginator', $paginator);
+        $this->view->assign('pagination', $pagination);
+        $this->view->assign('currentPage', $currentPage);
+        $this->view->assign('storagePid', $this->storagePid);
+        $this->view->assign('currentPageId', $this->currentPageId);
+        $this->view->assign('totalItems', count($allMails));
+
+        $moduleTemplate->setContent($this->view->render());
+
+        return $this->htmlResponse($moduleTemplate->renderContent());
+
     }
 
-    protected function approveAction(ServerRequestInterface $request): ResponseInterface
+    /**
+     * Show action - displays details of a single mail entry with action buttons
+     *
+     * @param int $uid The mail UID
+     * @return ResponseInterface
+     */
+    public function showAction(int $uid): ResponseInterface
     {
-        $uid = (int)($request->getQueryParams()['uid'] ?? 0);
+        $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
+        $moduleTemplate->setTitle('Powermail Entry Details');
 
-        if ($uid > 0) {
-            $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
-                ->getQueryBuilderForTable('tx_powermail_domain_model_mail');
+        // Get mail entry
+        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
+            ->getQueryBuilderForTable('tx_powermail_domain_model_mail');
 
-            $queryBuilder
-                ->update('tx_powermail_domain_model_mail')
-                ->where(
-                    $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, \PDO::PARAM_INT))
-                )
-                ->set('approved', 1)
-                ->executeStatement();
+        $queryBuilder
+            ->select('*')
+            ->from('tx_powermail_domain_model_mail')
+            ->where(
+                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, \PDO::PARAM_INT)),
+                $queryBuilder->expr()->eq('deleted', $queryBuilder->createNamedParameter(0, \PDO::PARAM_INT))
+            );
 
-            $this->addFlashMessage('Mail entry approved successfully.', 'Success', ContextualFeedbackSeverity::OK);
+        if ($this->storagePid > 0) {
+            $queryBuilder->andWhere(
+                $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($this->storagePid, \PDO::PARAM_INT))
+            );
         }
 
-        return $this->listAction($request);
-    }
+        $mail = $queryBuilder
+            ->executeQuery()
+            ->fetchAssociative();
 
-    protected function rejectAction(ServerRequestInterface $request): ResponseInterface
-    {
-        $uid = (int)($request->getQueryParams()['uid'] ?? 0);
-
-        if ($uid > 0) {
-            $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
-                ->getQueryBuilderForTable('tx_powermail_domain_model_mail');
-
-            $queryBuilder
-                ->update('tx_powermail_domain_model_mail')
-                ->where(
-                    $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, \PDO::PARAM_INT))
-                )
-                ->set('deleted', 1)
-                ->executeStatement();
-
-            $this->addFlashMessage('Mail entry rejected and deleted.', 'Success', ContextualFeedbackSeverity::OK);
+        if (!$mail) {
+            $this->addFlashMessage(
+                'The requested mail entry could not be found or is not in the configured storage (PID: ' . $this->storagePid . ').',
+                'Entry not found',
+                FlashMessage::ERROR
+            );
+            return $this->redirect('list');
         }
 
-        return $this->listAction($request);
+        // Get form title
+        $mail['form_title'] = $this->getFormTitle((int)$mail['form']);
+
+        // Get answers
+        $mail['answers'] = $this->getMailAnswers($uid);
+
+        // Check if already approved
+        $isApproved = (bool)$mail['approved'];
+
+        $this->view->assign('mail', $mail);
+        $this->view->assign('storagePid', $this->storagePid);
+        $this->view->assign('isApproved', $isApproved);
+        $moduleTemplate->setContent($this->view->render());
+
+        return $this->htmlResponse($moduleTemplate->renderContent());
+
     }
 
-    protected function addFlashMessage(string $message, string $title, ContextualFeedbackSeverity $severity): void
+    /**
+     * Approve action - approves a mail entry
+     *
+     * @param int $uid The mail UID
+     * @param bool $returnToShow If true, redirect to show action instead of list
+     * @return ResponseInterface
+     */
+    public function approveAction(int $uid, bool $returnToShow = false): ResponseInterface
     {
-        $flashMessage = GeneralUtility::makeInstance(
-            FlashMessage::class,
-            $message,
-            $title,
-            $severity,
-            true
-        );
+        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
+            ->getQueryBuilderForTable('tx_powermail_domain_model_mail');
 
-        $flashMessageService = GeneralUtility::makeInstance(FlashMessageService::class);
-        $messageQueue = $flashMessageService->getMessageQueueByIdentifier();
-        $messageQueue->addMessage($flashMessage);
+        $queryBuilder
+            ->update('tx_powermail_domain_model_mail')
+            ->where(
+                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, \PDO::PARAM_INT))
+            )
+            ->set('approved', 1);
+
+        if ($this->storagePid > 0) {
+            $queryBuilder->andWhere(
+                $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($this->storagePid, \PDO::PARAM_INT))
+            );
+        }
+
+        $affectedRows = $queryBuilder->executeStatement();
+
+        if ($affectedRows > 0) {
+            $this->addFlashMessage(
+                'The mail entry has been approved successfully.',
+                'Entry Approved',
+                FlashMessage::OK
+            );
+        } else {
+            $this->addFlashMessage(
+                'The entry could not be approved. It may not exist or is not in the configured storage (PID: ' . $this->storagePid . ').',
+                'Approval Failed',
+                FlashMessage::ERROR
+            );
+        }
+
+        if ($returnToShow) {
+            return $this->redirect('show', null, null, ['uid' => $uid]);
+        }
+
+        return $this->redirect('list');
+    }
+
+    /**
+     * Reject action - rejects (deletes) a mail entry
+     *
+     * @param int $uid The mail UID
+     * @return ResponseInterface
+     */
+    public function rejectAction(int $uid): ResponseInterface
+    {
+        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
+            ->getQueryBuilderForTable('tx_powermail_domain_model_mail');
+
+        $queryBuilder
+            ->update('tx_powermail_domain_model_mail')
+            ->where(
+                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, \PDO::PARAM_INT))
+            )
+            ->set('deleted', 1);
+
+        if ($this->storagePid > 0) {
+            $queryBuilder->andWhere(
+                $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($this->storagePid, \PDO::PARAM_INT))
+            );
+        }
+
+        $affectedRows = $queryBuilder->executeStatement();
+
+        if ($affectedRows > 0) {
+            $this->addFlashMessage(
+                'The mail entry has been rejected and deleted.',
+                'Entry Rejected',
+                FlashMessage::WARNING
+            );
+        } else {
+            $this->addFlashMessage(
+                'The entry could not be rejected. It may not exist or is not in the configured storage (PID: ' . $this->storagePid . ').',
+                'Rejection Failed',
+                FlashMessage::ERROR
+            );
+        }
+
+        return $this->redirect('list');
+    }
+
+    /**
+     * Get form title by form UID
+     *
+     * @param int $formUid
+     * @return string
+     */
+    protected function getFormTitle(int $formUid): string
+    {
+        if ($formUid === 0) {
+            return 'Unknown Form';
+        }
+
+        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
+            ->getQueryBuilderForTable('tx_powermail_domain_model_form');
+
+        $form = $queryBuilder
+            ->select('title')
+            ->from('tx_powermail_domain_model_form')
+            ->where(
+                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($formUid, \PDO::PARAM_INT))
+            )
+            ->executeQuery()
+            ->fetchAssociative();
+
+        return $form['title'] ?? 'Unknown Form';
+    }
+
+    /**
+     * Get all answers for a mail entry
+     *
+     * @param int $mailUid
+     * @return array
+     */
+    protected function getMailAnswers(int $mailUid): array
+    {
+        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
+            ->getQueryBuilderForTable('tx_powermail_domain_model_answer');
+
+        return $queryBuilder
+            ->select('a.value', 'a.field', 'f.title as field_title')
+            ->from('tx_powermail_domain_model_answer', 'a')
+            ->leftJoin('a', 'tx_powermail_domain_model_field', 'f', 'a.field = f.uid')
+            ->where(
+                $queryBuilder->expr()->eq('a.mail', $queryBuilder->createNamedParameter($mailUid, \PDO::PARAM_INT))
+            )
+            ->orderBy('a.uid', 'ASC')
+            ->executeQuery()
+            ->fetchAllAssociative();
     }
 }

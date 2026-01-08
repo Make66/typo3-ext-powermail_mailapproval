@@ -1,0 +1,21 @@
+# =============================================
+# Powermail Mail Approval - TypoScript Constants
+# =============================================
+
+module.tx_powermailmailapproval {
+    view {
+        # cat=module.tx_powermailmailapproval/file; type=string; label=Path to template root (BE)
+        templateRootPath = EXT:powermail_mailapproval/Resources/Private/Templates/
+
+        # cat=module.tx_powermailmailapproval/file; type=string; label=Path to template partials (BE)
+        partialRootPath = EXT:powermail_mailapproval/Resources/Private/Partials/
+
+        # cat=module.tx_powermailmailapproval/file; type=string; label=Path to template layouts (BE)
+        layoutRootPath = EXT:powermail_mailapproval/Resources/Private/Layouts/
+    }
+
+    persistence {
+        # cat=module.tx_powermailmailapproval//a; type=int+; label=Default storage PID
+        storagePid = 0
+    }
+}

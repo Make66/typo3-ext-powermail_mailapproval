@@ -1,8 +1,7 @@
-# =============================================
-# Powermail Mail Approval - TypoScript Setup
-# =============================================
-
+# Auto-loaded TypoScript setup
+#@import 'EXT:powermail_mailapproval/Configuration/TypoScript/setup.typoscript'
 # Backend Module Configuration
+/*
 module.tx_powermailmailapproval {
     view {
         templateRootPaths {
@@ -34,16 +33,4 @@ module.tx_powermailmailapproval {
         itemsPerPage = 20
     }
 }
-
-# Frontend Plugin Configuration (Pi2 Filter)
-# Only show approved entries in powermail frontend list
-plugin.tx_powermail.settings.Pi2 {
-    search {
-        staticPluginsVariables {
-            filter {
-                # Filter: only approved entries
-                approved = 1
-            }
-        }
-    }
-}
+*/

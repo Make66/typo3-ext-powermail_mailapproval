@@ -1,0 +1,135 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:be.pageRenderer />
+
+<div class="mb-3">
+    <f:link.action action="list" class="btn btn-default">
+        ← <f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:action.back_to_list" />
+    </f:link.action>
+</div>
+
+<h1><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:page.title.show" /></h1>
+
+<f:flashMessages />
+
+<!-- Action Buttons at Top -->
+<f:if condition="{isApproved}">
+    <f:then>
+        <div class="alert alert-success mb-3">
+            <strong><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:show.already_approved" /></strong>
+        </div>
+    </f:then>
+    <f:else>
+        <div class="mb-3">
+            <div class="btn-group btn-group-lg" role="group">
+                <f:link.action
+                    action="approve"
+                    arguments="{uid: mail.uid, returnToShow: 1}"
+                    class="btn btn-success">
+                    ✓ <f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:action.approve_entry" />
+                </f:link.action>
+                <f:link.action
+                    action="reject"
+                    arguments="{uid: mail.uid}"
+                    class="btn btn-danger"
+                    onclick="return confirm('{f:translate(key: 'LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:message.confirm_reject_delete')}');">
+                    ✗ <f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:action.reject_entry" />
+                </f:link.action>
+            </div>
+        </div>
+    </f:else>
+</f:if>
+
+<div class="card">
+    <div class="card-header">
+        <h3><f:format.printf arguments="{0: mail.uid}"><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:show.entry_number" /></f:format.printf></h3>
+    </div>
+    <div class="card-body">
+        <table class="table table-bordered">
+            <tbody>
+            <tr>
+                <th style="width: 200px;"><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:show.field.uid" /></th>
+                <td>{mail.uid}</td>
+            </tr>
+            <tr>
+                <th><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:show.field.form" /></th>
+                <td>{mail.form_title}</td>
+            </tr>
+            <tr>
+                <th><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:show.field.sender_name" /></th>
+                <td>{mail.sender_name}</td>
+            </tr>
+            <tr>
+                <th><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:show.field.sender_email" /></th>
+                <td>{mail.sender_mail}</td>
+            </tr>
+            <tr>
+                <th><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:show.field.subject" /></th>
+                <td>{mail.subject}</td>
+            </tr>
+            <tr>
+                <th><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:show.field.submitted" /></th>
+                <td><f:format.date format="d.m.Y H:i:s">{mail.crdate}</f:format.date></td>
+            </tr>
+            <tr>
+                <th><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:show.field.approval_status" /></th>
+                <td>
+                    <f:if condition="{isApproved}">
+                        <f:then>
+                            <span class="badge badge-success"><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:show.status.approved" /></span>
+                        </f:then>
+                        <f:else>
+                            <span class="badge badge-warning"><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:show.status.pending" /></span>
+                        </f:else>
+                    </f:if>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <f:if condition="{mail.answers}">
+            <h4 class="mt-4"><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:show.section.form_answers" /></h4>
+            <table class="table table-striped">
+                <thead>
+                <tr>
+                    <th><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:show.table.header.field" /></th>
+                    <th><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:show.table.header.value" /></th>
+                </tr>
+                </thead>
+                <tbody>
+                <f:for each="{mail.answers}" as="answer">
+                    <tr>
+                        <th>{answer.field_title}</th>
+                        <td><f:format.nl2br>{answer.value}</f:format.nl2br></td>
+                    </tr>
+                </f:for>
+                </tbody>
+            </table>
+        </f:if>
+
+        <!-- Action Buttons at Bottom (same as top) -->
+        <f:if condition="{isApproved} == 0">
+            <div class="mt-4">
+                <div class="btn-group btn-group-lg" role="group">
+                    <f:link.action
+                        action="approve"
+                        arguments="{uid: mail.uid, returnToShow: 1}"
+                        class="btn btn-success">
+                        ✓ <f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:action.approve_entry" />
+                    </f:link.action>
+                    <f:link.action
+                        action="reject"
+                        arguments="{uid: mail.uid}"
+                        class="btn btn-danger"
+                        onclick="return confirm('{f:translate(key: 'LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:message.confirm_reject_delete')}');">
+                        ✗ <f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:action.reject_entry" />
+                    </f:link.action>
+                </div>
+            </div>
+        </f:if>
+    </div>
+</div>
+
+</html>

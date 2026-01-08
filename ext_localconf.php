@@ -1,6 +1,7 @@
 <?php
 defined('TYPO3') or die();
 
+use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 // Register XClass to extend Mail model with approved property
@@ -32,3 +33,12 @@ $iconRegistry->registerIcon(
     \TYPO3\CMS\Core\Imaging\IconProvider\SvgIconProvider::class,
     ['source' => 'EXT:powermail_mailapproval/Resources/Public/Icons/Extension.svg']
 );
+
+ExtensionManagementUtility::addTypoScript(
+    'powermail_mailapproval',
+    'constants',
+    '@import \'EXT:powermail_mailapproval/Configuration/TypoScript/constants.typoscript\'');
+ExtensionManagementUtility::addTypoScript(
+    'powermail_mailapproval',
+    'setup',
+    '@import \'EXT:powermail_mailapproval/Configuration/TypoScript/setup.typoscript\'');

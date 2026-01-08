@@ -29,5 +29,5 @@ $tempColumns = [
     'tx_powermail_domain_model_mail',
     'approved',
     '',
-    'after:uid'
+    'after:crdate'
 );

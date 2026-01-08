@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<xliff version="1.0">
+    <file source-language="en" datatype="plaintext" original="messages" date="2026-01-08T19:36:00Z" product-name="powermail_mailapproval">
+        <header/>
+        <body>
+            <!-- Page Titles -->
+            <trans-unit id="page.title.list">
+                <source>Powermail Entries - Pending Approval</source>
+            </trans-unit>
+            <trans-unit id="page.title.show">
+                <source>Mail Entry Details</source>
+            </trans-unit>
+
+            <!-- List View -->
+            <trans-unit id="list.table.header.uid">
+                <source>UID</source>
+            </trans-unit>
+            <trans-unit id="list.table.header.form">
+                <source>Form</source>
+            </trans-unit>
+            <trans-unit id="list.table.header.sender_name">
+                <source>Sender Name</source>
+            </trans-unit>
+            <trans-unit id="list.table.header.sender_email">
+                <source>Sender Email</source>
+            </trans-unit>
+            <trans-unit id="list.table.header.submitted">
+                <source>Submitted</source>
+            </trans-unit>
+            <trans-unit id="list.table.header.actions">
+                <source>Actions</source>
+            </trans-unit>
+
+            <!-- Actions -->
+            <trans-unit id="action.details">
+                <source>Details</source>
+            </trans-unit>
+            <trans-unit id="action.approve">
+                <source>Approve</source>
+            </trans-unit>
+            <trans-unit id="action.reject">
+                <source>Reject</source>
+            </trans-unit>
+            <trans-unit id="action.back_to_list">
+                <source>Back to List</source>
+            </trans-unit>
+            <trans-unit id="action.approve_entry">
+                <source>Approve Entry</source>
+            </trans-unit>
+            <trans-unit id="action.reject_entry">
+                <source>Reject Entry</source>
+            </trans-unit>
+
+            <!-- Messages -->
+            <trans-unit id="message.no_pending_entries">
+                <source>No pending entries</source>
+            </trans-unit>
+            <trans-unit id="message.all_processed">
+                <source>All powermail submissions have been processed.</source>
+            </trans-unit>
+            <trans-unit id="message.confirm_reject">
+                <source>Are you sure you want to reject this entry?</source>
+            </trans-unit>
+            <trans-unit id="message.confirm_reject_delete">
+                <source>Are you sure you want to reject and delete this entry?</source>
+            </trans-unit>
+
+            <!-- Pagination -->
+            <trans-unit id="pagination.previous">
+                <source>Previous</source>
+            </trans-unit>
+            <trans-unit id="pagination.next">
+                <source>Next</source>
+            </trans-unit>
+            <trans-unit id="list.showing_entries">
+                <source>Showing entries</source>
+            </trans-unit>
+            <trans-unit id="list.of">
+                <source>of</source>
+            </trans-unit>
+            <trans-unit id="show.already_approved">
+                <source>This entry has already been approved</source>
+            </trans-unit>
+
+            <!-- Show View -->
+            <trans-unit id="show.entry_number">
+                <source>Entry #%s</source>
+            </trans-unit>
+            <trans-unit id="show.field.uid">
+                <source>UID</source>
+            </trans-unit>
+            <trans-unit id="show.field.form">
+                <source>Form</source>
+            </trans-unit>
+            <trans-unit id="show.field.sender_name">
+                <source>Sender Name</source>
+            </trans-unit>
+            <trans-unit id="show.field.sender_email">
+                <source>Sender Email</source>
+            </trans-unit>
+            <trans-unit id="show.field.subject">
+                <source>Subject</source>
+            </trans-unit>
+            <trans-unit id="show.field.submitted">
+                <source>Submitted</source>
+            </trans-unit>
+            <trans-unit id="show.field.approval_status">
+                <source>Approval Status</source>
+            </trans-unit>
+            <trans-unit id="show.status.approved">
+                <source>Approved</source>
+            </trans-unit>
+            <trans-unit id="show.status.pending">
+                <source>Pending</source>
+            </trans-unit>
+            <trans-unit id="show.section.form_answers">
+                <source>Form Answers</source>
+            </trans-unit>
+            <trans-unit id="show.table.header.field">
+                <source>Field</source>
+            </trans-unit>
+            <trans-unit id="show.table.header.value">
+                <source>Value</source>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>
