@@ -1,0 +1,11 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  Taketool\PowermailMailapproval\:
+    resource: '../Classes/*'
+
+  Taketool\PowermailMailapproval\Controller\ApprovalController:
+    tags: ['backend.controller']
