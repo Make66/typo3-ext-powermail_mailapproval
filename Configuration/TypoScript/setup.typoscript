@@ -1,3 +1,4 @@
+# Filter only approved entries in Pi2 (Frontend)
 plugin.tx_powermail.settings.Pi2 {
     search {
         staticPluginsVariables {

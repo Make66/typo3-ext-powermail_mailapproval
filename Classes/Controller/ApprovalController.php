@@ -42,7 +42,7 @@ class ApprovalController
         $moduleTemplate = $this->moduleTemplateFactory->create($request);
         $moduleTemplate->setTitle('Powermail Approval');
 
-        // Get unapproved mails
+        // Get unapproved mails sorted by crdate DESC
         $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
             ->getQueryBuilderForTable('tx_powermail_domain_model_mail');
 
@@ -57,7 +57,7 @@ class ApprovalController
             ->executeQuery()
             ->fetchAllAssociative();
 
-        // Get form titles for each mail
+        // Get form titles and answers for each mail
         foreach ($mails as &$mail) {
             $formQueryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
                 ->getQueryBuilderForTable('tx_powermail_domain_model_form');
