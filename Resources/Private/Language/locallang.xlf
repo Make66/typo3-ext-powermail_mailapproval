@@ -78,6 +78,9 @@
             <trans-unit id="list.of">
                 <source>of</source>
             </trans-unit>
+            <trans-unit id="list.page">
+                <source>Page</source>
+            </trans-unit>
             <trans-unit id="show.already_approved">
                 <source>This entry has already been approved</source>
             </trans-unit>

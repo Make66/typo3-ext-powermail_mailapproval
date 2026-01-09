@@ -199,13 +199,23 @@ class ApprovalController extends ActionController
         $pagination = new SimplePagination($paginator);
 
         $this->view->assign('mails', $paginator->getPaginatedItems());
-        $this->view->assign('paginator', $paginator);
-        $this->view->assign('pagination', $pagination);
-        $this->view->assign('currentPage', $currentPage);
         $this->view->assign('storagePid', $this->storagePid);
         $this->view->assign('currentPageId', $this->currentPageId);
         $this->view->assign('totalItems', count($allMails));
 
+        $this->view->assignMultiple([
+            'paginator' => $paginator,
+            'currentPage' => $currentPage,
+            'pagination' => [
+                'firstPageNumber' => $pagination->getFirstPageNumber(), // returns [1, 2, 3]
+                'lastPageNumber' => $pagination->getLastPageNumber(), // returns [1, 2, 3]
+                'startRecordNumber' => $pagination->getStartRecordNumber(), // returns [1, 2, 3]
+                'edRecordNumber' => $pagination->getEndRecordNumber(), // returns [1, 2, 3]
+                'allPageNumbers' => $pagination->getAllPageNumbers(), // returns [1, 2, 3]
+                'previousPageNumber' => $pagination->getPreviousPageNumber(), // returns 2
+                'nextPageNumber' => $pagination->getNextPageNumber(),
+            ],
+        ]);
         $moduleTemplate->setContent($this->view->render());
 
         return $this->htmlResponse($moduleTemplate->renderContent());
