@@ -166,6 +166,10 @@ After configuration, verify in the backend module:
 - Kompatibel mit: TYPO3 11.5
 - Abhängig von: powermail ^10.0
 
+## ToDo
+This extension replaces MailRepository by Services.yaml to add the new filter, which leads to some architectical glitches
+like we now need many of the models from powermail
+
 ## Lizenz
 
 GPL-2.0-or-later

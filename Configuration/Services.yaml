@@ -9,3 +9,11 @@ services:
 
   Taketool\PowermailMailapproval\Controller\ApprovalController:
     tags: ['backend.controller']
+
+  #In2code\Powermail\Domain\Repository\MailRepository: '@Taketool\PowermailMailapproval\Xclass\MailRepository'
+
+  In2code\Powermail\Domain\Repository\MailRepository:
+    alias: Taketool\PowermailMailapproval\Domain\Repository\MyMailRepository
+
+  Taketool\PowermailMailapproval\Domain\Model\MyMail:
+    alias: In2code\Powermail\Domain\Model\Mail

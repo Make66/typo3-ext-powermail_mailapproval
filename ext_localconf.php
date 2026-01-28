@@ -42,3 +42,9 @@ ExtensionManagementUtility::addTypoScript(
     'powermail_mailapproval',
     'setup',
     '@import \'EXT:powermail_mailapproval/Configuration/TypoScript/setup.typoscript\'');
+
+/*// XCLASS for MailRepository which lacks functionality
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['Objects']
+[\In2code\Powermail\Domain\Repository\MailRepository::class] = [
+    'className' => \Taketool\PowermailMailapproval\Xclass\MailRepository::class
+];*/
