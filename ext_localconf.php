@@ -34,14 +34,19 @@ $iconRegistry->registerIcon(
     ['source' => 'EXT:powermail_mailapproval/Resources/Public/Icons/Extension.svg']
 );
 
-ExtensionManagementUtility::addTypoScript(
-    'powermail_mailapproval',
-    'constants',
-    '@import \'EXT:powermail_mailapproval/Configuration/TypoScript/constants.typoscript\'');
+// @import is not reliably processed when added via addTypoScript() in TYPO3 11
+// (defaultTypoScript_setup is not always run through checkIncludeLines).
+// Critical frontend lines are therefore inlined here directly; everything else
+// (backend module config etc.) stays in setup.typoscript and is loaded via the
+// static template registration in Configuration/TCA/Overrides/sys_template.php.
 ExtensionManagementUtility::addTypoScript(
     'powermail_mailapproval',
     'setup',
-    '@import \'EXT:powermail_mailapproval/Configuration/TypoScript/setup.typoscript\'');
+    // Override powermail template resolution so our List.html takes precedence
+    'plugin.tx_powermail.view.templateRootPaths.10 = EXT:powermail_mailapproval/Resources/Private/Templates/' . LF .
+    // Load sorting JS unconditionally – independent of the template override
+    'page.includeJSFooter.sortTournaments = EXT:powermail_mailapproval/Resources/Public/JavaScript/sort-tournaments.js'
+);
 
 /*// XCLASS for MailRepository which lacks functionality
 $GLOBALS['TYPO3_CONF_VARS']['SYS']['Objects']

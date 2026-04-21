@@ -9,43 +9,49 @@ extracted from the **Zeitraum** column, and removes the leading row-number colum
 |------|---------|
 | `Resources/Public/JavaScript/sort-tournaments.js` | Sorting logic |
 | `Resources/Private/Templates/Output/List.html` | Overridden Fluid template |
-| `Configuration/TypoScript/setup.typoscript` | Template path override |
+| `ext_localconf.php` | Auto-loads critical TypoScript inline |
+| `Configuration/TCA/Overrides/sys_template.php` | Registers static template for backend module config |
 
 ## How it works
 
-### TypoScript override
+### TypoScript loading — why inline, not `@import`
 
-`setup.typoscript` registers the extension's template folder at priority index `10`,
-which is higher than powermail's defaults (`0` = built-in, `1` = constant placeholder):
+`addTypoScript()` appends content to TYPO3's `defaultTypoScript_setup` global.
+In TYPO3 11, that string is **not** run through `checkIncludeLines` (the `@import`
+preprocessor), so an `@import` placed there is silently ignored.
 
-```typoscript
-plugin.tx_powermail {
-    view {
-        templateRootPaths {
-            10 = EXT:powermail_mailapproval/Resources/Private/Templates/
-        }
-    }
-}
+The two critical frontend lines are therefore inlined directly in `ext_localconf.php`:
+
+```php
+ExtensionManagementUtility::addTypoScript(
+    'powermail_mailapproval',
+    'setup',
+    'plugin.tx_powermail.view.templateRootPaths.10 = EXT:powermail_mailapproval/Resources/Private/Templates/' . LF .
+    'page.includeJSFooter.sortTournaments = EXT:powermail_mailapproval/Resources/Public/JavaScript/sort-tournaments.js'
+);
 ```
 
-TYPO3 Fluid resolves templates from the highest index first, so
-`Resources/Private/Templates/Output/List.html` in this extension shadows
-the original powermail template.
+This runs unconditionally for every page request — no static template selection
+required, no `@import` indirection.
+
+### Template path override
+
+Index `10` is higher than powermail's built-in indices (`0` = core template,
+`1` = constant placeholder), so TYPO3 Fluid resolves `Output/List.html` from
+this extension first.
+
+### JS loading — why TypoScript, not `f:asset.script`
+
+Loading the JS via `page.includeJSFooter` in TypoScript is independent of
+whether the template override succeeds. `f:asset.script` inside a plugin's
+Fluid template can silently fail if the AssetCollector is not wired for that
+render pass. The TypoScript approach always works.
 
 ### Fluid template
 
-`Output/List.html` is identical to the powermail original with two additions:
+`Output/List.html` is identical to the powermail original with one addition:
 
-1. **Script asset** — loads the JS via TYPO3's asset pipeline (deduplication,
-   correct placement in page head/footer):
-
-   ```html
-   <f:asset.script identifier="sortTournaments"
-       src="{f:uri.resource(path:'JavaScript/sort-tournaments.js',
-             extensionName:'powermail_mailapproval')}" />
-   ```
-
-2. **Hook attribute** — the table receives `data-js="tournament-sort"` so the
+- **Hook attribute** — the table receives `data-js="tournament-sort"` so the
    script can find it without relying on fragile CSS class selectors.
 
 ### JavaScript module (`sort-tournaments.js`)
