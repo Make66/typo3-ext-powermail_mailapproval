@@ -35,6 +35,15 @@ module.tx_powermailmailapproval {
     }
 }
 
+# Override powermail_pi2 template to use our custom List.html
+plugin.tx_powermail {
+    view {
+        templateRootPaths {
+            10 = EXT:powermail_mailapproval/Resources/Private/Templates/
+        }
+    }
+}
+
 # Frontend Plugin Configuration (Pi2 Filter)
 # Only show approved entries in powermail frontend list
 plugin.tx_powermail.settings.Pi2 {
