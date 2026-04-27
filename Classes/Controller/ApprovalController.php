@@ -5,6 +5,7 @@ namespace Taketool\PowermailMailapproval\Controller;
 
 use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
+use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Messaging\FlashMessage;
 use TYPO3\CMS\Core\Pagination\SimplePagination;
@@ -189,9 +190,18 @@ class ApprovalController extends ActionController
             ->executeQuery()
             ->fetchAllAssociative();
 
-        // Enrich mails with form titles
+        // Enrich mails with form titles and specific field answers
+        $mailUids = array_column($allMails, 'uid');
+        $fieldAnswers = $this->getFieldAnswersByMailUids($mailUids, ['name', 'vorname', 'e_mail_01', 'ausrichtenderverein', 'zeitraum']);
+
         foreach ($allMails as &$mail) {
             $mail['form_title'] = $this->getFormTitle((int)$mail['form']);
+            $answers = $fieldAnswers[$mail['uid']] ?? [];
+            $mail['field_name']     = $answers['name'] ?? '';
+            $mail['field_vorname']  = $answers['vorname'] ?? '';
+            $mail['field_email']    = $answers['e_mail_01'] ?? '';
+            $mail['field_verein']   = $answers['ausrichtenderverein'] ?? '';
+            $mail['field_zeitraum'] = $answers['zeitraum'] ?? '';
         }
 
         // Create pagination
@@ -371,6 +381,47 @@ class ApprovalController extends ActionController
         }
 
         return $this->redirect('list');
+    }
+
+    /**
+     * Fetch specific field answers for multiple mail UIDs in one query.
+     * Returns [mailUid => [marker => value]].
+     *
+     * @param int[] $mailUids
+     * @param string[] $markers
+     * @return array
+     */
+    protected function getFieldAnswersByMailUids(array $mailUids, array $markers): array
+    {
+        if (empty($mailUids)) {
+            return [];
+        }
+
+        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
+            ->getQueryBuilderForTable('tx_powermail_domain_model_answer');
+
+        $rows = $queryBuilder
+            ->select('a.mail', 'a.value', 'f.marker')
+            ->from('tx_powermail_domain_model_answer', 'a')
+            ->leftJoin('a', 'tx_powermail_domain_model_field', 'f', 'a.field = f.uid')
+            ->where(
+                $queryBuilder->expr()->in(
+                    'a.mail',
+                    $queryBuilder->createNamedParameter($mailUids, Connection::PARAM_INT_ARRAY)
+                ),
+                $queryBuilder->expr()->in(
+                    'f.marker',
+                    $queryBuilder->createNamedParameter($markers, Connection::PARAM_STR_ARRAY)
+                )
+            )
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        $result = [];
+        foreach ($rows as $row) {
+            $result[$row['mail']][$row['marker']] = $row['value'];
+        }
+        return $result;
     }
 
     /**

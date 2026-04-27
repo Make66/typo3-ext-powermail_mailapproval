@@ -31,10 +31,11 @@
             <thead>
             <tr>
                 <th>No.</th>
-                <!--<th><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:list.table.header.uid" /></th>-->
-                <th><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:list.table.header.form" /></th>
-                <th><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:list.table.header.sender_name" /></th>
-                <th><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:list.table.header.sender_email" /></th>
+                <th>Name</th>
+                <th>Vorname</th>
+                <th>E-Mail</th>
+                <th>ausrichtender Verein</th>
+                <th>Zeitraum</th>
                 <th><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:list.table.header.submitted" /></th>
                 <th><f:translate key="LLL:EXT:powermail_mailapproval/Resources/Private/Language/locallang.xlf:list.table.header.actions" /></th>
             </tr>
@@ -43,10 +44,11 @@
             <f:for each="{mails}" as="mail" iteration="iterator">
                 <tr>
                     <td>{iterator.index + pagination.startRecordNumber}</td>
-                    <!--<td>{mail.uid}</td>-->
-                    <td>{mail.form_title}</td>
-                    <td>{mail.sender_name}</td>
-                    <td>{mail.sender_mail}</td>
+                    <td>{mail.field_name}</td>
+                    <td>{mail.field_vorname}</td>
+                    <td>{mail.field_email}</td>
+                    <td>{mail.field_verein}</td>
+                    <td>{mail.field_zeitraum}</td>
                     <td><f:format.date format="d.m.Y H:i">{mail.crdate}</f:format.date></td>
                     <td>
                         <div class="btn-group" role="group">
