@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-use Taketool\PowermailMailapproval\Domain\Model\MyMail;
+use Taketool\PowermailMailapproval\Domain\Model\Mail;
 
 return [
-    MyMail::class => [
+    Mail::class => [
         'tableName' => 'tx_powermail_domain_model_mail',
     ],
 
