@@ -1,21 +1,27 @@
 {
-    "name": "taketool/powermail-mailapproval",
-    "type": "typo3-cms-extension",
-    "description": "Backend module for approving powermail submissions",
-    "license": "GPL-2.0-or-later",
-    "require": {
-        "typo3/cms-core": "^11.5",
-        "typo3/cms-backend": "^11.5",
-        "in2code/powermail": "^10.0"
-    },
-    "autoload": {
-        "psr-4": {
-            "Taketool\\PowermailMailapproval\\": "Classes/"
-        }
-    },
-    "extra": {
-        "typo3/cms": {
-            "extension-key": "powermail_mailapproval"
-        }
+  "name": "taketool/powermail-mailapproval",
+  "type": "typo3-cms-extension",
+  "description": "Backend module for approving powermail submissions",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "typo3/cms-core": "^12.4",
+    "typo3/cms-backend": "^12.4",
+    "in2code/powermail": "^12.5"
+  },
+  "autoload": {
+    "psr-4": {
+      "Taketool\\PowermailMailapproval\\": "Classes/"
     }
+  },
+  "extra": {
+    "typo3/cms": {
+      "extension-key": "powermail_mailapproval"
+    }
+  },
+  "config": {
+    "allow-plugins": {
+      "typo3/cms-composer-installers": true,
+      "typo3/class-alias-loader": true
+    }
+  }
 }

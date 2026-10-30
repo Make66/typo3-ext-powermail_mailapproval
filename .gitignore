@@ -23,3 +23,8 @@
 /typo3temp/
 
 .idea/
+
+# composer install artifacts (core and dependencies come from the main project)
+/public/
+/vendor/
+composer.lock

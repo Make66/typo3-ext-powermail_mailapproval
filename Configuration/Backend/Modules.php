@@ -12,7 +12,7 @@ return [
         'iconIdentifier' => 'powermail_mailapproval-module',
         'controllerActions' => [
             \Taketool\PowermailMailapproval\Controller\ApprovalController::class => [
-                'list', 'approve', 'reject'
+                'list', 'show', 'approve', 'reject'
             ],
         ],
     ],
