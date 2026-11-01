@@ -9,8 +9,7 @@ extracted from the **Zeitraum** column, and removes the leading row-number colum
 |------|---------|
 | `Resources/Public/JavaScript/sort-tournaments.js` | Sorting logic |
 | `Resources/Private/Templates/Output/List.html` | Overridden Fluid template |
-| `ext_localconf.php` | Auto-loads critical TypoScript inline |
-| `Configuration/TCA/Overrides/sys_template.php` | Registers static template for backend module config |
+| `ext_localconf.php` | Auto-loads the template path override inline |
 
 ## How it works
 
@@ -20,14 +19,13 @@ extracted from the **Zeitraum** column, and removes the leading row-number colum
 In TYPO3 11, that string is **not** run through `checkIncludeLines` (the `@import`
 preprocessor), so an `@import` placed there is silently ignored.
 
-The two critical frontend lines are therefore inlined directly in `ext_localconf.php`:
+The template path override is therefore inlined directly in `ext_localconf.php`:
 
 ```php
 ExtensionManagementUtility::addTypoScript(
     'powermail_mailapproval',
     'setup',
-    'plugin.tx_powermail.view.templateRootPaths.10 = EXT:powermail_mailapproval/Resources/Private/Templates/' . LF .
-    'page.includeJSFooter.sortTournaments = EXT:powermail_mailapproval/Resources/Public/JavaScript/sort-tournaments.js'
+    'plugin.tx_powermail.view.templateRootPaths.10 = EXT:powermail_mailapproval/Resources/Private/Templates/' . LF
 );
 ```
 
@@ -40,17 +38,16 @@ Index `10` is higher than powermail's built-in indices (`0` = core template,
 `1` = constant placeholder), so TYPO3 Fluid resolves `Output/List.html` from
 this extension first.
 
-### JS loading — why TypoScript, not `f:asset.script`
+### JS loading
 
-Loading the JS via `page.includeJSFooter` in TypoScript is independent of
-whether the template override succeeds. `f:asset.script` inside a plugin's
-Fluid template can silently fail if the AssetCollector is not wired for that
-render pass. The TypoScript approach always works.
+The script is loaded with `f:asset.script` at the top of `Output/List.html`, so
+it is only included on pages that render the list.
 
 ### Fluid template
 
-`Output/List.html` is identical to the powermail original with one addition:
+`Output/List.html` is the powermail 12 original with two additions:
 
+- **Script tag** — `f:asset.script` loads `sort-tournaments.js`.
 - **Hook attribute** — the table receives `data-js="tournament-sort"` so the
    script can find it without relying on fragile CSS class selectors.
 
@@ -99,3 +96,67 @@ Recognised German month names: `Januar` – `Dezember` (case-insensitive, includ
   default order.
 - The script is scoped to `[data-js="tournament-sort"]` tables only, so it does
   not affect other powermail list views on the same page.
+
+## TYPO3 12 / PHP 8.1 review (2026-11-01)
+
+Review of the whole extension after the port to TYPO3 12.4 / powermail 12
+(commit `ac3f6d5`), and the fixes that followed. All PHP files lint clean on
+PHP 8.1.34.
+
+### Fixed
+
+1. **Frontend list showed unapproved entries.** The original filter lived in
+   `MyMailRepository`; its DI alias was removed in `8690b13` (so already broken on
+   v11) and the class was deleted in the port. The `PM_ListViewExtended` hook and
+   the `staticPluginsVariables.filter.approved` TypoScript never worked with
+   powermail 12 and have been removed.
+
+   Now: `Classes/Domain/Repository/MailRepository.php` extends powermail's
+   repository and is aliased to it in `Configuration/Services.yaml` (powermail's
+   controllers get the repository through constructor DI, so an XCLASS would not
+   apply). It overrides only `findListBySettings()`: it takes the query of the
+   parent result and adds `approved = 1` to its constraint. This covers the list
+   and the export in `OutputController`. The class name matters: Extbase derives
+   the model from it, so it maps to our `Domain\Model\Mail`, which has the
+   `approved` property.
+
+2. **Event listener was never registered** (`#[AsEventListener]` is TYPO3 13 only)
+   and would not have persisted anything. Removed; the DB default `approved = 0`
+   already makes new entries pending.
+
+3. **Edit/Delete links in the frontend list.** powermail 12 moved edit/delete into
+   the Pi4 plugin; `Output/List.html` now uses `pluginName="Pi4"` like the core
+   template.
+
+### Deprecations removed
+
+- `FlashMessage::*` → `ContextualFeedbackSeverity::*`.
+- `\PDO::PARAM_INT` → `Connection::PARAM_INT`.
+- Backend module renders through `ModuleTemplate::assignMultiple()` +
+  `renderResponse()`; `Approval/List.html` and `Approval/Show.html` use the backend
+  `Module` layout (`<f:section name="Content">`). The template-path setup in
+  `initializeAction()` is gone (templates resolve via the module's package).
+- TCA checkbox items use `['label' => '']`.
+
+### Site upgrade note
+
+The tournament list page returned HTTP 500 (`No Content Object definition found at
+TypoScript object path "tt_content.list.20.powermail_pi2"`) until the powermail
+wizard `powermailPluginUpdater` ran. powermail 12 registers its plugins as content
+elements (`CType = powermail_pi2`). `scripts/upgrade-v12.sh` runs all wizards, so
+production is covered; local DBs imported without it need
+`typo3 upgrade:run powermailPluginUpdater`.
+
+### Verified (DDEV, 2026-11-01)
+
+- Frontend `/turniere-anzeigen` (hvrhp): with all entries pending the list is
+  empty; approving two entries shows exactly those two.
+- Backend module: list with pagination, details, approve (single flash message,
+  returns to details) and reject all work in the Module layout.
+- Not tested: a real form submission from the frontend.
+
+### Still open
+
+- `.idea/` is committed.
+- `Configuration/TypoScript/*.typoscript` (`module.tx_powermailmailapproval`) is
+  not loaded anywhere and not read by the controller.

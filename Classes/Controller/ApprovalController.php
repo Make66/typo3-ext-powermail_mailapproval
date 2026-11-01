@@ -7,10 +7,10 @@ use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
-use TYPO3\CMS\Core\Messaging\FlashMessage;
 use TYPO3\CMS\Core\Pagination\SimplePagination;
 use TYPO3\CMS\Core\Pagination\ArrayPaginator;
 use TYPO3\CMS\Core\Site\SiteFinder;
+use TYPO3\CMS\Core\Type\ContextualFeedbackSeverity;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Mvc\Controller\ActionController;
 
@@ -43,24 +43,11 @@ class ApprovalController extends ActionController
     }
 
     /**
-     * Initialize action - set view configuration and read storage PID from site config
+     * Initialize action - read storage PID from site config
      */
     protected function initializeAction(): void
     {
         parent::initializeAction();
-
-        // Set template paths
-        if ($this->view !== null) {
-            $this->view->setTemplateRootPaths([
-                10 => GeneralUtility::getFileAbsFileName('EXT:powermail_mailapproval/Resources/Private/Templates/')
-            ]);
-            $this->view->setPartialRootPaths([
-                10 => GeneralUtility::getFileAbsFileName('EXT:powermail_mailapproval/Resources/Private/Partials/')
-            ]);
-            $this->view->setLayoutRootPaths([
-                10 => GeneralUtility::getFileAbsFileName('EXT:powermail_mailapproval/Resources/Private/Layouts/')
-            ]);
-        }
 
         // Get current page ID from request
         $this->currentPageId = $this->getCurrentPageId();
@@ -174,15 +161,15 @@ class ApprovalController extends ActionController
             ->select('*')
             ->from('tx_powermail_domain_model_mail')
             ->where(
-                $queryBuilder->expr()->eq('approved', $queryBuilder->createNamedParameter(0, \PDO::PARAM_INT)),
-                $queryBuilder->expr()->eq('deleted', $queryBuilder->createNamedParameter(0, \PDO::PARAM_INT))
+                $queryBuilder->expr()->eq('approved', $queryBuilder->createNamedParameter(0, Connection::PARAM_INT)),
+                $queryBuilder->expr()->eq('deleted', $queryBuilder->createNamedParameter(0, Connection::PARAM_INT))
             )
             ->orderBy('crdate', 'DESC');
 
         // Filter by storagePid if configured
         if ($this->storagePid > 0) {
             $queryBuilder->andWhere(
-                $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($this->storagePid, \PDO::PARAM_INT))
+                $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($this->storagePid, Connection::PARAM_INT))
             );
         }
 
@@ -208,12 +195,11 @@ class ApprovalController extends ActionController
         $paginator = new ArrayPaginator($allMails, $currentPage, $this->itemsPerPage);
         $pagination = new SimplePagination($paginator);
 
-        $this->view->assign('mails', $paginator->getPaginatedItems());
-        $this->view->assign('storagePid', $this->storagePid);
-        $this->view->assign('currentPageId', $this->currentPageId);
-        $this->view->assign('totalItems', count($allMails));
-
-        $this->view->assignMultiple([
+        $moduleTemplate->assignMultiple([
+            'mails' => $paginator->getPaginatedItems(),
+            'storagePid' => $this->storagePid,
+            'currentPageId' => $this->currentPageId,
+            'totalItems' => count($allMails),
             'paginator' => $paginator,
             'currentPage' => $currentPage,
             'pagination' => [
@@ -226,10 +212,8 @@ class ApprovalController extends ActionController
                 'nextPageNumber' => $pagination->getNextPageNumber(),
             ],
         ]);
-        $moduleTemplate->setContent($this->view->render());
 
-        return $this->htmlResponse($moduleTemplate->renderContent());
-
+        return $moduleTemplate->renderResponse('Approval/List');
     }
 
     /**
@@ -251,13 +235,13 @@ class ApprovalController extends ActionController
             ->select('*')
             ->from('tx_powermail_domain_model_mail')
             ->where(
-                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, \PDO::PARAM_INT)),
-                $queryBuilder->expr()->eq('deleted', $queryBuilder->createNamedParameter(0, \PDO::PARAM_INT))
+                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, Connection::PARAM_INT)),
+                $queryBuilder->expr()->eq('deleted', $queryBuilder->createNamedParameter(0, Connection::PARAM_INT))
             );
 
         if ($this->storagePid > 0) {
             $queryBuilder->andWhere(
-                $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($this->storagePid, \PDO::PARAM_INT))
+                $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($this->storagePid, Connection::PARAM_INT))
             );
         }
 
@@ -269,7 +253,7 @@ class ApprovalController extends ActionController
             $this->addFlashMessage(
                 'The requested mail entry could not be found or is not in the configured storage (PID: ' . $this->storagePid . ').',
                 'Entry not found',
-                FlashMessage::ERROR
+                ContextualFeedbackSeverity::ERROR
             );
             return $this->redirect('list');
         }
@@ -283,13 +267,13 @@ class ApprovalController extends ActionController
         // Check if already approved
         $isApproved = (bool)$mail['approved'];
 
-        $this->view->assign('mail', $mail);
-        $this->view->assign('storagePid', $this->storagePid);
-        $this->view->assign('isApproved', $isApproved);
-        $moduleTemplate->setContent($this->view->render());
+        $moduleTemplate->assignMultiple([
+            'mail' => $mail,
+            'storagePid' => $this->storagePid,
+            'isApproved' => $isApproved,
+        ]);
 
-        return $this->htmlResponse($moduleTemplate->renderContent());
-
+        return $moduleTemplate->renderResponse('Approval/Show');
     }
 
     /**
@@ -307,13 +291,13 @@ class ApprovalController extends ActionController
         $queryBuilder
             ->update('tx_powermail_domain_model_mail')
             ->where(
-                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, \PDO::PARAM_INT))
+                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, Connection::PARAM_INT))
             )
             ->set('approved', 1);
 
         if ($this->storagePid > 0) {
             $queryBuilder->andWhere(
-                $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($this->storagePid, \PDO::PARAM_INT))
+                $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($this->storagePid, Connection::PARAM_INT))
             );
         }
 
@@ -323,13 +307,13 @@ class ApprovalController extends ActionController
             $this->addFlashMessage(
                 'The mail entry has been approved successfully.',
                 'Entry Approved',
-                FlashMessage::OK
+                ContextualFeedbackSeverity::OK
             );
         } else {
             $this->addFlashMessage(
                 'The entry could not be approved. It may not exist or is not in the configured storage (PID: ' . $this->storagePid . ').',
                 'Approval Failed',
-                FlashMessage::ERROR
+                ContextualFeedbackSeverity::ERROR
             );
         }
 
@@ -354,13 +338,13 @@ class ApprovalController extends ActionController
         $queryBuilder
             ->update('tx_powermail_domain_model_mail')
             ->where(
-                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, \PDO::PARAM_INT))
+                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, Connection::PARAM_INT))
             )
             ->set('deleted', 1);
 
         if ($this->storagePid > 0) {
             $queryBuilder->andWhere(
-                $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($this->storagePid, \PDO::PARAM_INT))
+                $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($this->storagePid, Connection::PARAM_INT))
             );
         }
 
@@ -370,13 +354,13 @@ class ApprovalController extends ActionController
             $this->addFlashMessage(
                 'The mail entry has been rejected and deleted.',
                 'Entry Rejected',
-                FlashMessage::WARNING
+                ContextualFeedbackSeverity::WARNING
             );
         } else {
             $this->addFlashMessage(
                 'The entry could not be rejected. It may not exist or is not in the configured storage (PID: ' . $this->storagePid . ').',
                 'Rejection Failed',
-                FlashMessage::ERROR
+                ContextualFeedbackSeverity::ERROR
             );
         }
 
@@ -443,7 +427,7 @@ class ApprovalController extends ActionController
             ->select('title')
             ->from('tx_powermail_domain_model_form')
             ->where(
-                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($formUid, \PDO::PARAM_INT))
+                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($formUid, Connection::PARAM_INT))
             )
             ->executeQuery()
             ->fetchAssociative();
@@ -467,7 +451,7 @@ class ApprovalController extends ActionController
             ->from('tx_powermail_domain_model_answer', 'a')
             ->leftJoin('a', 'tx_powermail_domain_model_field', 'f', 'a.field = f.uid')
             ->where(
-                $queryBuilder->expr()->eq('a.mail', $queryBuilder->createNamedParameter($mailUid, \PDO::PARAM_INT))
+                $queryBuilder->expr()->eq('a.mail', $queryBuilder->createNamedParameter($mailUid, Connection::PARAM_INT))
             )
             ->orderBy('a.uid', 'ASC')
             ->executeQuery()

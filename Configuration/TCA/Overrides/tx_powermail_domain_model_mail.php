@@ -10,10 +10,7 @@ $tempColumns = [
             'type' => 'check',
             'renderType' => 'checkboxToggle',
             'items' => [
-                [
-                    0 => '',
-                    1 => '',
-                ]
+                ['label' => ''],
             ],
             'default' => 0,
         ],

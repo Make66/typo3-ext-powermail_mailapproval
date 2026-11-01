@@ -10,3 +10,8 @@ services:
   Taketool\PowermailMailapproval\Controller\ApprovalController:
     tags: ['backend.controller']
 
+
+  # Frontend list/export only shows approved entries
+  In2code\Powermail\Domain\Repository\MailRepository:
+    alias: Taketool\PowermailMailapproval\Domain\Repository\MailRepository
+    public: true

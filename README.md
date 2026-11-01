@@ -1,6 +1,6 @@
 # Powermail Mail Approval
 
-TYPO3 v11 Extension für die Freigabe von Powermail-Einträgen
+TYPO3 v12 Extension für die Freigabe von Powermail-Einträgen
 
 ## Features
 
@@ -11,10 +11,9 @@ TYPO3 v11 Extension für die Freigabe von Powermail-Einträgen
 
 ## Installation
 
-1. Extension in `typo3conf/ext/powermail_mailapproval/` entpacken
-2. Extension im Extension Manager aktivieren
-3. Datenbank-Update durchführen (neues Feld `approved` wird hinzugefügt)
-4. TypoScript Template einbinden (optional, für automatische Pi2-Filterung)
+1. `composer require taketool/powermail-mailapproval`
+2. Datenbank-Update durchführen (neues Feld `approved` wird hinzugefügt)
+3. Kein TypoScript-Template nötig, Filter und Template-Override sind automatisch aktiv
 
 ## Verwendung
 
@@ -23,21 +22,12 @@ TYPO3 v11 Extension für die Freigabe von Powermail-Einträgen
 3. Details anzeigen mit "Show Details"
 4. Einträge freigeben mit "Approve" oder ablehnen mit "Reject"
 
-## TypoScript
+## Frontend-Filter
 
-Die Extension fügt automatisch einen Filter für Pi2 hinzu:
-
-```typoscript
-plugin.tx_powermail.settings.Pi2 {
-    search {
-        staticPluginsVariables {
-            filter {
-                approved = 1
-            }
-        }
-    }
-}
-```
+Die Extension ersetzt per DI-Alias (`Configuration/Services.yaml`) das powermail
+`MailRepository` durch eine Unterklasse, die in `findListBySettings()` nur
+freigegebene Einträge (`approved = 1`) liefert. Das gilt für die Liste (Pi2)
+und den Export.
 
 # Configure storagePid via TYPO3 Backend
 
@@ -163,12 +153,8 @@ After configuration, verify in the backend module:
 
 - Vendor: Taketool
 - Extension Key: powermail_mailapproval
-- Kompatibel mit: TYPO3 11.5
-- Abhängig von: powermail ^10.0
-
-## ToDo
-This extension replaces MailRepository by Services.yaml to add the new filter, which leads to some architectical glitches
-like we now need many of the models from powermail
+- Kompatibel mit: TYPO3 12.4, PHP 8.1+
+- Abhängig von: powermail ^12.5
 
 ## Lizenz
 
